@@ -31,3 +31,7 @@ file_path = 'operations.json'
 transactions_data = load_transactions(file_path)
 transactions = transactions_data  # Обратите внимание на изменение этой строки
 display_last_transactions(transactions)
+
+
+
+
