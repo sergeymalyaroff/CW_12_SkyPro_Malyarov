@@ -14,13 +14,16 @@ def mask_account_number(account_number):
     return masked_number
 
 def format_transaction(transaction):
-    formatted_transaction = f"{transaction['date']} {transaction['description']}\n"
+    date = datetime.strptime(transaction['date'], '%Y-%m-%dT%H:%M:%S.%f')
+    formatted_date = date.strftime('%d.%m.%Y')
+    formatted_transaction = f"{formatted_date} {transaction['description']}\n"
     if 'from' in transaction:
         formatted_transaction += f"{mask_card_number(transaction['from'])} -> {transaction['to']}\n"
     else:
         formatted_transaction += f"Счет -> {transaction['to']}\n"
     formatted_transaction += f"{transaction['operationAmount']['amount']} {transaction['operationAmount']['currency']['name']}"
     return formatted_transaction
+
 
 def display_last_transactions(transactions):
     last_transactions = transactions[-5:]
