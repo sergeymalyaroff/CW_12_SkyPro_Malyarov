@@ -33,3 +33,5 @@ def display_last_transactions(transactions):
     last_transactions = sorted_transactions[:5]
     formatted_transactions = '\n'.join([format_transaction(transaction) for transaction in last_transactions])
     print(formatted_transactions)
+
+
