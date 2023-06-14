@@ -1,98 +1,53 @@
 import json
 from datetime import datetime
+
 def load_transactions(file_path):
-    """
-       Загружает данные о транзакциях из файла JSON.
-
-       Args:
-           file_path (str): Путь к файлу JSON.
-
-       Returns:
-           list: Список транзакций.
-
-       Raises:
-           FileNotFoundError: Если файл не найден.
-           json.JSONDecodeError: Если возникает ошибка при декодировании JSON.
-
-       """
-
     with open(file_path, 'r') as file:
-        transactions_data = json.load(file)
-    return transactions_data
+        transactions = json.load(file)
+    return transactions
 
 def mask_card_number(card_number):
-    """
-       Маскирует номер карты, заменяя все цифры, кроме первых 4 и последних 4, символами "*".
+    card_number = card_number.replace(" ", "")
+    first_6 = card_number[:6]
+    last_4 = card_number[-4:]
+    return f"{first_6} **** **** {last_4}"
 
-       Args:
-           card_number (str): Номер карты.
-
-       Returns:
-           str: Маскированный номер карты.
-
-       """
-
-    if ' ' in card_number:
-        masked_number = card_number[:card_number.index(' ')]
-        masked_number += ' ' + '*' * (len(card_number) - card_number.index(' ') - 1)
-    else:
-        masked_number = card_number[:4] + ' ' + '*' * (len(card_number) - 8) + card_number[-4:]
-    return masked_number
 
 def mask_account_number(account_number):
-    """
-       Маскирует номер счета, заменяя все цифры, кроме последних 4, символами "*".
-
-       Args:
-           account_number (str): Номер счета.
-
-       Returns:
-           str: Маскированный номер счета.
-
-       """
-
-    masked_number = '**' + account_number[-4:]
-    return masked_number
+    return 'Счет **' + account_number[-4:]
 
 def format_transaction(transaction):
-    """
-       Форматирует информацию о транзакции в заданном формате.
+    date = datetime.strptime(transaction['date'], '%Y-%m-%dT%H:%M:%S.%f').strftime('%d.%m.%Y')
+    description = transaction['description']
+    from_info = transaction.get('from')
+    to_info = transaction.get('to')
+    amount = transaction['operationAmount']['amount']
+    currency = transaction['operationAmount']['currency']['name']
 
-       Args:
-           transaction (dict): Информация о транзакции.
+    if from_info and ' ' in from_info:
+        from_parts = from_info.split(' ')
+        if from_parts[0] == 'Счет':
+            from_info = mask_account_number(from_parts[1])
+        else:
+            from_info = ' '.join(from_parts[:-1]) + ' ' + mask_card_number(from_parts[-1])
+    elif from_info:
+        from_info = mask_account_number(from_info)
 
-       Returns:
-           str: Отформатированная информация о транзакции.
+    if to_info and ' ' in to_info:
+        to_parts = to_info.split(' ')
+        if to_parts[0] == 'Счет':
+            to_info = mask_account_number(to_parts[1])
+        else:
+            to_info = ' '.join(to_parts[:-1]) + ' ' + mask_card_number(to_parts[-1])
+    elif to_info:
+        to_info = mask_account_number(to_info)
 
-       """
-
-    if 'date' not in transaction:
-        return "Invalid transaction: Missing 'date' field"
-
-    date = datetime.strptime(transaction['date'], '%Y-%m-%dT%H:%M:%S.%f')
-    formatted_date = date.strftime('%d.%m.%Y')
-    formatted_transaction = f"{formatted_date} {transaction['description']}\n"
-    if 'from' in transaction:
-        formatted_transaction += f"{mask_card_number(transaction['from'])} -> {mask_account_number(transaction['to'])}\n"
-    else:
-        formatted_transaction += f"Счет -> {mask_account_number(transaction['to'])}\n"
-    formatted_transaction += f"{transaction['operationAmount']['amount']} {transaction['operationAmount']['currency']['name']}"
-    return formatted_transaction
+    return f"{date} {description}\n{from_info if from_info else ''} -> {to_info if to_info else ''}\n{amount} {currency}\n"
 
 
 def display_last_transactions(transactions):
-    """
-     Выводит информацию о последних транзакциях.
-
-     Args:
-         transactions (list): Список транзакций.
-
-     """
-
-
-    sorted_transactions = sorted(transactions, key=lambda x: x.get('date', ''), reverse=True)
-    last_transactions = sorted_transactions[:5]
-    formatted_transactions = '\n'.join([format_transaction(transaction) for transaction in last_transactions])
-    print(formatted_transactions)
-
-
+    executed_transactions = [t for t in transactions if 'state' in t and t['state'] == 'EXECUTED']
+    sorted_transactions = sorted(executed_transactions, key=lambda t: t['date'], reverse=True)
+    for transaction in sorted_transactions[:5]:
+        print(format_transaction(transaction))
+        print()
