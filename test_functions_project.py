@@ -1,33 +1,53 @@
-import unittest
-from functions_project import mask_card_number, mask_account_number
+import pytest
+from functions_project import mask_card_number, mask_account_number, format_transaction, load_transactions
 
-class TestFunctions(unittest.TestCase):
+def test_mask_card_number():
+    card_number = "1234567890123456"
+    assert mask_card_number(card_number) == "123456 **** **** 3456"
 
-    def test_mask_card_number(self):
-        card_number = 'Visa Gold 5999414228426353'
-        masked_number = mask_card_number(card_number)
-        self.assertEqual(masked_number, 'Visa Gold ************6353')
+def test_mask_account_number():
+    account_number = "1234567890123456"
+    assert mask_account_number(account_number) == "Счет **3456"
 
-        card_number = 'MasterCard 3152479541115065'
-        masked_number = mask_card_number(card_number)
-        self.assertEqual(masked_number, 'MasterCard ****************5065')
+def test_format_transaction():
+    transaction = {
+        "date": "2023-06-30T14:15:22.123456",
+        "description": "Test operation",
+        "from": "Visa Classic 1234567890123456",
+        "to": "Счет 1234567890123456",
+        "operationAmount": {"amount": "100.00", "currency": {"name": "USD", "code": "USD"}},
+    }
+    expected_output = (
+        "30.06.2023 Test operation\n"
+        "Visa Classic 123456 **** **** 3456 -> Счет **3456\n"
+        "100.00 USD\n"
+    )
+    assert format_transaction(transaction) == expected_output
 
-        card_number = 'Maestro 3928549031574026'
-        masked_number = mask_card_number(card_number)
-        self.assertEqual(masked_number, 'Maestro ****************4026')
+def test_load_transactions():
+    transactions = load_transactions("path_to_test_file.json")
+    assert len(transactions) > 0
+    assert "date" in transactions[0]
+    assert "description" in transactions[0]
+    assert "from" in transactions[0]
+    assert "to" in transactions[0]
+    assert "operationAmount" in transactions[0]
+    assert "amount" in transactions[0]["operationAmount"]
+    assert "currency" in transactions[0]["operationAmount"]
 
-    def test_mask_account_number(self):
-        account_number = 'Счет 72731966109147704472'
-        masked_number = mask_account_number(account_number)
-        self.assertEqual(masked_number, 'Счет **************7472')
+def test_format_transaction_with_different_types():
+    transaction = {
+        "date": "2023-06-30T14:15:22.123456",
+        "description": "Перевод организации",
+        "from": "Счет 1234567890123456",
+        "to": "Visa Classic 1234567890123456",
+        "operationAmount": {"amount": "100.00", "currency": {"name": "USD", "code": "USD"}},
+    }
+    expected_output = (
+        "30.06.2023 Перевод организации\n"
+        "Счет **3456 -> Visa Classic 123456 **** **** 3456\n"
+        "100.00 USD\n"
+    )
+    assert format_transaction(transaction) == expected_output
 
-        account_number = 'Счет 84163357546688983493'
-        masked_number = mask_account_number(account_number)
-        self.assertEqual(masked_number, 'Счет **************3493')
 
-        account_number = 'Счет 17066032701791012883'
-        masked_number = mask_account_number(account_number)
-        self.assertEqual(masked_number, 'Счет **************2883')
-
-if __name__ == '__main__':
-    unittest.main()
